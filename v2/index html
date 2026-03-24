@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="id" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>PETAKON - Peta Konektivitas Silaturahmi Madsanega</title>
+  <meta name="description" content="PETAKON: Peta Konektivitas Silaturahmi Madsanega. Navigasi Hati, Eratkan Silaturahmi. Temukan rumah guru MTsN 3 Tulungagung dengan mudah.">
+  <meta property="og:title" content="PETAKON - Peta Konektivitas Silaturahmi Madsanega">
+  <meta property="og:description" content="Navigasi Hati, Eratkan Silaturahmi. Temukan dan kunjungi rumah guru MTsN 3 Tulungagung untuk mempererat tali silaturahmi.">
+  <meta property="og:image" content="https://i.ibb.co.com/tpBTZFvX/ogpetakon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://petakon.madsanega.web.id">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PETAKON - Peta Konektivitas Silaturahmi Madsanega">
+  <meta name="twitter:description" content="Navigasi Hati, Eratkan Silaturahmi.">
+  <meta name="twitter:image" content="https://i.ibb.co.com/tpBTZFvX/ogpetakon.png">
+  <link rel="icon" type="image/webp" href="https://i.ibb.co.com/C3rWbcMR/logomtsn3tulungagung.webp">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <script>
+tailwind.config={theme:{extend:{fontFamily:{jakarta:['"Plus Jakarta Sans"','sans-serif']}}}}
+</script>
+  <style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif}
+.leaflet-control-zoom,.leaflet-control-attribution{display:none!important}
+#map{width:100%;height:100%;position:absolute;top:0;left:0;z-index:1}
+
+.glass{background:rgba(255,255,255,0.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.glass-dark{background:rgba(15,23,42,0.75);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%)}
+
+.bottom-sheet{
+  position:fixed;bottom:0;left:0;right:0;z-index:1000;
+  background:#fff;border-radius:20px 20px 0 0;
+  box-shadow:0 -4px 30px rgba(0,0,0,0.15);
+  transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);
+  will-change:transform;
+  touch-action:none;
+}
+.bottom-sheet.dragging{transition:none}
+
+.sheet-handle{width:36px;height:4px;background:#d1d5db;border-radius:99px;margin:10px auto 6px}
+
+.search-box{
+  background:#f1f5f9;border-radius:14px;border:1.5px solid transparent;
+  transition:all 0.2s ease;
+}
+.search-box:focus-within{border-color:#3b82f6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,0.12)}
+
+.person-card{
+  border-radius:14px;padding:12px 14px;
+  transition:all 0.18s ease;cursor:pointer;
+  border:1.5px solid #f1f5f9;
+}
+.person-card:hover,.person-card:active{background:#f8fafc;border-color:#e2e8f0}
+
+.nav-btn{
+  background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;
+  border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:all 0.15s ease;white-space:nowrap;
+}
+.nav-btn:active{transform:scale(0.95)}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+
+.tip-banner{
+  background:linear-gradient(135deg,#fef3c7,#fde68a);
+  border:1px solid #f59e0b;border-radius:12px;
+  padding:10px 14px;font-size:12.5px;line-height:1.5;color:#92400e;
+}
+
+.popup-custom .leaflet-popup-content-wrapper{
+  border-radius:16px!important;padding:0!important;box-shadow:0 8px 30px rgba(0,0,0,0.18)!important;
+  overflow:hidden;
+}
+.popup-custom .leaflet-popup-content{margin:0!important;width:260px!important}
+.popup-custom .leaflet-popup-tip{display:none}
+
+.marker-pulse{
+  animation:pulse-ring 2s cubic-bezier(0.4,0,0.6,1) infinite;
+}
+@keyframes pulse-ring{
+  0%{opacity:0.6;transform:scale(1)}
+  50%{opacity:0;transform:scale(2.5)}
+  100%{opacity:0;transform:scale(2.5)}
+}
+
+.fade-in{animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.desa-group-header{position:sticky;top:0;z-index:2;background:#fff;padding:8px 0 4px}
+
+.sheet-content{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.sheet-content::-webkit-scrollbar{width:0}
+
+.no-location-badge{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:10.5px;padding:2px 8px;border-radius:99px}
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full"><!-- MAP -->
+  <div id="map"></div><!-- FLOATING HEADER -->
+  <header id="floating-header" class="fixed top-0 left-0 right-0 z-[900] glass" style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.3)">
+   <div class="flex items-center gap-3"><img src="https://i.ibb.co.com/C3rWbcMR/logomtsn3tulungagung.webp" alt="Logo MTsN 3" class="w-10 h-10 rounded-xl shadow-sm" loading="lazy" onerror="this.style.background='#e5e7eb';this.alt='Logo';">
+    <div class="min-w-0">
+     <h1 id="main-title" class="text-[17px] font-extrabold text-slate-800 tracking-tight leading-tight">PETAKON</h1>
+     <p id="main-subtitle" class="text-[10.5px] font-medium text-slate-500 truncate leading-tight">Peta Konektivitas Silaturahmi Madsanega</p>
+    </div>
+    <div class="ml-auto flex items-center gap-2"><button id="btn-locate" class="w-9 h-9 rounded-xl bg-white/80 border border-slate-200 flex items-center justify-center shadow-sm" aria-label="Lokasi saya">
+      <svg width="18" height="18" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round">
+       <circle cx="9" cy="9" r="3" /><path d="M9 1v3M9 14v3M1 9h3M14 9h3" />
+      </svg></button>
+    </div>
+   </div>
+  </header><!-- TIP BANNER -->
+  <div id="tip-banner" class="fixed z-[950] left-3 right-3 tip-banner fade-in" style="top:72px">
+   <div class="flex items-start gap-2"><span class="text-base mt-0.5">💡</span>
+    <p class="flex-1">Lokasi 📍 adalah <strong>perkiraan awal</strong>. Jika ragu, silakan hubungi teman, Wali Kelas, atau warga sekitar untuk memastikan jalan yang tepat.</p><button id="dismiss-tip" class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-amber-200/50 text-amber-800 font-bold text-sm" aria-label="Tutup tips">✕</button>
+   </div>
+  </div><!-- BOTTOM SHEET -->
+  <div id="bottom-sheet" class="bottom-sheet">
+   <div id="sheet-header" style="padding:0 16px 10px;cursor:grab">
+    <div class="sheet-handle"></div><!-- Search -->
+    <div class="search-box flex items-center gap-2 px-3 py-2.5 mt-1">
+     <svg width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round">
+      <circle cx="8" cy="8" r="5.5" /><path d="M12 12l4 4" />
+     </svg><input id="search-input" type="text" placeholder="Cari nama guru atau desa..." class="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400 font-medium"> <button id="clear-search" class="hidden w-5 h-5 rounded-full bg-slate-300 flex items-center justify-center" aria-label="Hapus pencarian">
+      <svg width="10" height="10" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+       <path d="M2 2l6 6M8 2l-6 6" />
+      </svg></button>
+    </div>
+    <div class="flex items-center justify-between mt-2.5 px-1"><span id="count-label" class="text-[11px] font-semibold text-slate-400"></span> <span class="text-[10px] text-slate-300 font-medium">🕌 Navigasi Hati, Eratkan Silaturahmi</span>
+    </div>
+   </div>
+   <div id="sheet-content" class="sheet-content" style="padding:0 16px 20px">
+    <div id="person-list"></div>
+    <footer id="app-footer" class="text-center py-6 mt-4 border-t border-slate-100">
+     <p id="footer-text" class="text-[11px] text-slate-400 font-medium">© 2026 TMC MTSN 3 TULUNGAGUNG</p>
+     <p class="text-[10px] text-slate-300 mt-1">Navigasi Hati, Eratkan Silaturahmi 💚</p>
+    </footer>
+   </div>
+  </div>
+  <script>
+// ===== DATA =====
+const DATA = [
+  {desa:"Rejotangan",color:"#10b981",people:[
+    {name:"Bu Ida Rochmawati",landmark:"Dekat Kantor Kecamatan",coords:[-8.121972,112.080917],approx:false},
+    {name:"Pak Nur Rohmat",landmark:"Pundensari",coords:[-8.1233193,112.0750821],approx:true}
+  ]},
+  {desa:"Aryojeding",color:"#3b82f6",people:[
+    {name:"Pak Mujib",landmark:"Darusalam",coords:[-8.1289356,112.0603745],approx:true},
+    {name:"Bu Thrisia",landmark:"Watu Gatho",coords:[-8.1246732,112.0518854],approx:true}
+  ]},
+  {desa:"Pakisrejo",color:"#f59e0b",people:[
+    {name:"Bu Siti Mahmudah",landmark:"Depan Halona/Mushola",coords:[-8.1270,112.081306],approx:false},
+    {name:"Pak Ipul",landmark:"Depan WPC Pakisrejo",coords:[-8.1283564,112.0815814],approx:false},
+    {name:"Bu Nurjayati",landmark:"Balaidesa Pakisrejo ke utara",coords:[-8.1272700,112.0748943],approx:false}
+  ]},
+  {desa:"Tegalrejo",color:"#ec4899",people:[
+    {name:"Bu Suci",landmark:"Dekat Masjid Besar Nur Hasan",coords:[-8.126694,112.071694],approx:false}
+  ]},
+  {desa:"Banjarejo",color:"#8b5cf6",people:[
+    {name:"Pak Lutfi",landmark:"Puskesmas",coords:[-8.1314398,112.0563660],approx:true}
+  ]},
+  {desa:"Karangsari",color:"#ef4444",people:[
+    {name:"Pak Ahmad",landmark:"Tugu Pagar Nusa Soko, Rumah Oren",coords:[-8.141472,112.026722],approx:false}
+  ]},
+  {desa:"Sukorejo",color:"#06b6d4",people:[
+    {name:"Bu Nurhidayati",landmark:"Dekat MI Irsyadus Shibyan, Jalan Kecil",coords:[-8.1571957,112.0518112],approx:false}
+  ]},
+  {desa:"Tenggur",color:"#a855f7",people:[
+    {name:"Bu Ribha",landmark:"Dusun Giring, BRI ke selatan",coords:[-8.138667,112.036917],approx:false}
+  ]},
+  {desa:"Buntaran",color:"#d946ef",people:[
+    {name:"Pak Kalimi",landmark:"Dekat Balaidesa Buntaran",coords:[-8.115667,112.040528],approx:true},
+    {name:"Pak Ali",landmark:"Fotokopi Karunia 2, Kebonagung",coords:[-8.1156,112.0425],approx:false},
+    {name:"Pak Ahsan",landmark:"Tempat Kelompok Tani",coords:[-8.120694,112.037750],approx:false}
+  ]},
+  {desa:"Jatidowo",color:"#6366f1",people:[
+    {name:"Bu Siska",landmark:"",coords:[-8.1501396,112.0489822],approx:false}
+  ]},
+  {desa:"Ngunut",color:"#f97316",noMarker:true,people:[
+    {name:"Bu Kuningsih",landmark:"Gilang",coords:null,approx:true},
+    {name:"Bu Yeni",landmark:"Wonokromo",coords:null,approx:true},
+    {name:"Bu Mes",landmark:"Stasiun",coords:null,approx:true},
+    {name:"Pak Mustofa",landmark:"Dekat Sarjana Ngunut",coords:null,approx:true}
+  ]}
+];
+
+// ===== MAP INIT =====
+const map = L.map('map',{
+  center:[-8.132,112.055],zoom:13,
+  zoomControl:false,attributionControl:false,
+  preferCanvas:true
+});
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+  maxZoom:19
+}).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{
+  maxZoom:19,pane:'overlayPane'
+}).addTo(map);
+
+// ===== MARKERS =====
+const markers = [];
+DATA.forEach(desa=>{
+  if(desa.noMarker) return;
+  desa.people.forEach(p=>{
+    if(!p.coords) return;
+    const m = L.circleMarker(p.coords,{
+      radius:9,fillColor:desa.color,color:'#fff',weight:2.5,opacity:1,fillOpacity:0.9
+    }).addTo(map);
+
+    const approxHTML = p.approx?`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:7px 10px;margin-top:8px;font-size:11px;color:#92400e;line-height:1.4">📍 Lokasi ini bersifat <strong>perkiraan</strong>. Silakan tanya warga sekitar atau hubungi yang bersangkutan saat sudah di area.</div>`:'';
+
+    m.bindPopup(`
+      <div style="font-family:'Plus Jakarta Sans',sans-serif">
+        <div style="background:${desa.color};padding:14px 16px;color:#fff">
+          <div style="font-size:10px;opacity:0.85;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Desa ${desa.desa}</div>
+          <div style="font-size:16px;font-weight:800;margin-top:3px">${p.name}</div>
+        </div>
+        <div style="padding:12px 16px">
+          <div style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:5px">
+            <span>📍</span>${p.landmark||'—'}
+          </div>
+          ${approxHTML}
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${p.coords[0]},${p.coords[1]}" target="_blank" rel="noopener noreferrer"
+            style="display:block;text-align:center;margin-top:12px;background:linear-gradient(135deg,${desa.color},${desa.color}dd);color:#fff;padding:10px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px">
+            🧭 Buka di Google Maps
+          </a>
+        </div>
+      </div>
+    `,{className:'popup-custom',maxWidth:280,closeButton:true});
+
+    markers.push({marker:m,person:p,desa});
+  });
+});
+
+// ===== BOTTOM SHEET LOGIC =====
+const sheet = document.getElementById('bottom-sheet');
+const sheetContent = document.getElementById('sheet-content');
+const sheetHeader = document.getElementById('sheet-header');
+const searchInput = document.getElementById('search-input');
+const clearBtn = document.getElementById('clear-search');
+const personList = document.getElementById('person-list');
+const countLabel = document.getElementById('count-label');
+
+let sheetH, snapPoints, currentSnap=0, startY, startTranslate, isDragging=false;
+
+function calcSnaps(){
+  const h = window.innerHeight;
+  sheetH = h;
+  sheet.style.height = h + 'px';
+  snapPoints = [h - 110, h * 0.45, 40]; // collapsed, half, expanded
+  setSnap(currentSnap);
+}
+
+function setSnap(idx){
+  currentSnap = idx;
+  sheet.style.transform = `translateY(${snapPoints[idx]}px)`;
+  sheetContent.style.maxHeight = (sheetH - snapPoints[idx] - sheetHeader.offsetHeight) + 'px';
+  if(idx === 0) sheetContent.scrollTop = 0;
+}
+
+function onPointerDown(e){
+  if(e.target.closest('.person-card') || e.target.closest('a') || e.target.closest('button:not(#sheet-header)') || e.target.closest('input')) return;
+  isDragging = true;
+  sheet.classList.add('dragging');
+  startY = e.touches ? e.touches[0].clientY : e.clientY;
+  const t = sheet.style.transform.match(/translateY\((.+)px\)/);
+  startTranslate = t ? parseFloat(t[1]) : snapPoints[currentSnap];
+}
+function onPointerMove(e){
+  if(!isDragging) return;
+  const y = e.touches ? e.touches[0].clientY : e.clientY;
+  let newT = startTranslate + (y - startY);
+  newT = Math.max(snapPoints[2], Math.min(snapPoints[0]+40, newT));
+  sheet.style.transform = `translateY(${newT}px)`;
+}
+function onPointerEnd(){
+  if(!isDragging) return;
+  isDragging = false;
+  sheet.classList.remove('dragging');
+  const t = sheet.style.transform.match(/translateY\((.+)px\)/);
+  const cur = t ? parseFloat(t[1]) : snapPoints[currentSnap];
+  let closest=0, minD=Infinity;
+  snapPoints.forEach((s,i)=>{const d=Math.abs(cur-s);if(d<minD){minD=d;closest=i}});
+  setSnap(closest);
+}
+
+sheetHeader.addEventListener('touchstart',onPointerDown,{passive:true});
+sheetHeader.addEventListener('touchmove',onPointerMove,{passive:true});
+sheetHeader.addEventListener('touchend',onPointerEnd);
+sheetHeader.addEventListener('mousedown',onPointerDown);
+window.addEventListener('mousemove',onPointerMove);
+window.addEventListener('mouseup',onPointerEnd);
+
+// ===== RENDER LIST =====
+function renderList(filter=''){
+  const f = filter.toLowerCase().trim();
+  let html = '', total=0;
+
+  DATA.forEach(desa=>{
+    const filtered = desa.people.filter(p=>
+      !f || p.name.toLowerCase().includes(f) || desa.desa.toLowerCase().includes(f) || (p.landmark||'').toLowerCase().includes(f)
+    );
+    if(!filtered.length) return;
+    total += filtered.length;
+
+    html += `<div class="desa-group-header"><div class="flex items-center gap-2 px-1">
+      <span class="w-3 h-3 rounded-full shrink-0" style="background:${desa.color}"></span>
+      <span class="text-[12px] font-bold text-slate-600 uppercase tracking-wide">Desa ${desa.desa}</span>
+      <span class="text-[10px] text-slate-300 font-medium">${filtered.length} guru</span>
+    </div></div>`;
+
+    filtered.forEach(p=>{
+      const hasCoords = !!p.coords;
+      const approxBadge = p.approx ? `<span class="no-location-badge ml-1">📍 Perkiraan</span>` : '';
+      const noLocBadge = !hasCoords ? `<span class="no-location-badge">Lokasi belum tersedia</span>` : '';
+
+      html += `<div class="person-card mb-2 fade-in" data-lat="${p.coords?p.coords[0]:''}" data-lng="${p.coords?p.coords[1]:''}" data-desa="${desa.desa}" data-color="${desa.color}" data-approx="${p.approx}">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[13.5px] font-bold text-slate-800">${p.name}</span>
+              ${approxBadge}${noLocBadge}
+            </div>
+            <p class="text-[11.5px] text-slate-400 mt-0.5 truncate">${p.landmark||'—'}</p>
+          </div>
+          ${hasCoords ? `<button class="nav-btn shrink-0" onclick="event.stopPropagation();flyTo(${p.coords[0]},${p.coords[1]},'${desa.color}')">Mari Berkunjung</button>` : ''}
+        </div>
+      </div>`;
+    });
+  });
+
+  personList.innerHTML = html || `<div class="text-center py-10 text-slate-400 text-sm">Tidak ditemukan 😔</div>`;
+  countLabel.textContent = `${total} guru ditemukan`;
+}
+
+// ===== FLY TO =====
+function flyTo(lat,lng,color){
+  map.flyTo([lat,lng],18,{duration:1.2});
+  // find and open the marker popup
+  markers.forEach(m=>{
+    if(m.person.coords && m.person.coords[0]===lat && m.person.coords[1]===lng){
+      setTimeout(()=>m.marker.openPopup(),800);
+    }
+  });
+  // collapse sheet
+  setSnap(0);
+}
+
+// click card to fly
+personList.addEventListener('click',e=>{
+  const card = e.target.closest('.person-card');
+  if(!card || e.target.closest('.nav-btn')) return;
+  const lat = parseFloat(card.dataset.lat);
+  const lng = parseFloat(card.dataset.lng);
+  if(!isNaN(lat) && !isNaN(lng)) flyTo(lat,lng,card.dataset.color);
+});
+
+// ===== SEARCH =====
+searchInput.addEventListener('input',()=>{
+  const v = searchInput.value;
+  clearBtn.classList.toggle('hidden',!v);
+  renderList(v);
+  if(v && currentSnap === 0) setSnap(1);
+});
+clearBtn.addEventListener('click',()=>{
+  searchInput.value='';
+  clearBtn.classList.add('hidden');
+  renderList();
+});
+
+// Focus search → expand
+searchInput.addEventListener('focus',()=>{if(currentSnap===0)setSnap(1)});
+
+// ===== TIP BANNER =====
+document.getElementById('dismiss-tip').addEventListener('click',()=>{
+  document.getElementById('tip-banner').style.display='none';
+});
+
+// ===== MY LOCATION =====
+document.getElementById('btn-locate').addEventListener('click',()=>{
+  if(!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    map.flyTo([pos.coords.latitude,pos.coords.longitude],16,{duration:1});
+  });
+});
+
+// ===== INIT =====
+calcSnaps();
+window.addEventListener('resize',calcSnaps);
+renderList();
+
+// Handle map click to collapse
+map.on('click',()=>{if(currentSnap>0)setSnap(0)});
+
+// ===== ELEMENT SDK =====
+const defaultConfig = {
+  app_title: 'PETAKON',
+  app_subtitle: 'Peta Konektivitas Silaturahmi Madsanega',
+  footer_text: '© 2026 TMC MTSN 3 TULUNGAGUNG',
+  background_color: '#0f172a',
+  surface_color: '#ffffff',
+  text_color: '#1e293b',
+  accent_color: '#3b82f6',
+  secondary_accent: '#10b981',
+  font_family: 'Plus Jakarta Sans',
+  font_size: 14
+};
+
+function applyConfig(config){
+  const t = config.app_title || defaultConfig.app_title;
+  const s = config.app_subtitle || defaultConfig.app_subtitle;
+  const f = config.footer_text || defaultConfig.footer_text;
+  const font = config.font_family || defaultConfig.font_family;
+  const size = config.font_size || defaultConfig.font_size;
+  const bg = config.background_color || defaultConfig.background_color;
+  const surface = config.surface_color || defaultConfig.surface_color;
+  const text = config.text_color || defaultConfig.text_color;
+  const accent = config.accent_color || defaultConfig.accent_color;
+  const accent2 = config.secondary_accent || defaultConfig.secondary_accent;
+
+  document.getElementById('main-title').textContent = t;
+  document.getElementById('main-subtitle').textContent = s;
+  document.getElementById('footer-text').textContent = f;
+  document.body.style.fontFamily = `${font}, Plus Jakarta Sans, sans-serif`;
+
+  // apply font size proportionally
+  document.getElementById('main-title').style.fontSize = `${size*1.21}px`;
+  document.getElementById('main-subtitle').style.fontSize = `${size*0.75}px`;
+  document.getElementById('count-label').style.fontSize = `${size*0.78}px`;
+
+  // colors
+  document.body.style.backgroundColor = bg;
+  sheet.style.backgroundColor = surface;
+  document.querySelectorAll('.person-card').forEach(c=>{c.style.color=text});
+  document.querySelectorAll('.nav-btn').forEach(b=>{b.style.background=`linear-gradient(135deg,${accent},${accent}dd)`});
+}
+
+if(window.elementSdk){
+  window.elementSdk.init({
+    defaultConfig,
+    onConfigChange: async(config)=>applyConfig(config),
+    mapToCapabilities:(config)=>({
+      recolorables:[
+        {get:()=>config.background_color||defaultConfig.background_color,set:v=>{config.background_color=v;window.elementSdk.setConfig({background_color:v})}},
+        {get:()=>config.surface_color||defaultConfig.surface_color,set:v=>{config.surface_color=v;window.elementSdk.setConfig({surface_color:v})}},
+        {get:()=>config.text_color||defaultConfig.text_color,set:v=>{config.text_color=v;window.elementSdk.setConfig({text_color:v})}},
+        {get:()=>config.accent_color||defaultConfig.accent_color,set:v=>{config.accent_color=v;window.elementSdk.setConfig({accent_color:v})}},
+        {get:()=>config.secondary_accent||defaultConfig.secondary_accent,set:v=>{config.secondary_accent=v;window.elementSdk.setConfig({secondary_accent:v})}}
+      ],
+      borderables:[],
+      fontEditable:{get:()=>config.font_family||defaultConfig.font_family,set:v=>{config.font_family=v;window.elementSdk.setConfig({font_family:v})}},
+      fontSizeable:{get:()=>config.font_size||defaultConfig.font_size,set:v=>{config.font_size=v;window.elementSdk.setConfig({font_size:v})}}
+    }),
+    mapToEditPanelValues:(config)=>new Map([
+      ['app_title',config.app_title||defaultConfig.app_title],
+      ['app_subtitle',config.app_subtitle||defaultConfig.app_subtitle],
+      ['footer_text',config.footer_text||defaultConfig.footer_text]
+    ])
+  });
+}
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e16ba90376e155a',t:'MTc3NDM2NjM0OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
