@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PETAKON - Peta Konektivitas Silaturahmi Madsanega</title>
+    
+    <!-- SEO & Open Graph -->
+    <meta name="description" content="Navigasi Hati, Eratkan Silaturahmi. Peta interaktif kunjungan guru dan staf MTsN 3 Tulungagung.">
+    <meta property="og:title" content="PETAKON Madsanega">
+    <meta property="og:description" content="Peta Konektivitas Silaturahmi Madsanega. Navigasi Hati, Eratkan Silaturahmi.">
+    <meta property="og:image" content="https://i.ibb.co.com/tpBTZFvX/ogpetakon.png">
+    <meta property="og:url" content="https://petakon.madsanega.web.id">
+    <link rel="icon" href="https://i.ibb.co.com/C3rWbcMR/logomtsn3tulungagung.webp" type="image/webp">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- GSAP for Smooth Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Glassmorphism Header */
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Bottom Sheet Styling */
+        #bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            z-index: 1000;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
+            height: 100vh;
+            transform: translateY(calc(100% - 140px)); /* Initial Collapsed State */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 5px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            margin: 12px auto;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        /* Leaflet Popup Styling */
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+            padding: 8px;
+        }
+        .leaflet-popup-tip {
+            display: none;
+        }
+
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Hide Default Leaflet Controls */
+        .leaflet-control-zoom, .leaflet-control-attribution {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Header Overlay -->
+    <div class="fixed top-4 left-4 right-4 z-[500] pointer-events-none">
+        <div class="glass-header pointer-events-auto rounded-2xl p-3 flex items-center gap-3">
+            <img src="https://i.ibb.co.com/C3rWbcMR/logomtsn3tulungagung.webp" alt="Logo" class="w-10 h-10 object-contain">
+            <div class="flex-1">
+                <h1 class="text-sm font-bold text-gray-800 leading-none">PETAKON</h1>
+                <p class="text-[10px] text-gray-500 font-medium">Peta Konektivitas Silaturahmi Madsanega</p>
+            </div>
+            <button class="bg-emerald-500 text-white p-2 rounded-xl shadow-lg">
+                <i data-lucide="heart" class="w-4 h-4 fill-current"></i>
+            </button>
+        </div>
+
+        <!-- Banner Tips -->
+        <div id="banner-tips" class="glass-header pointer-events-auto mt-3 rounded-xl p-3 border-l-4 border-amber-400 relative">
+            <button onclick="dismissBanner()" class="absolute top-2 right-2 text-gray-400">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <div class="flex gap-2">
+                <span class="text-lg">📍</span>
+                <p class="text-[11px] text-gray-700 leading-tight pr-4">
+                    Lokasi <b>perkiraan awal</b>. Jika ragu, silakan hubungi teman, Wali Kelas, atau warga sekitar untuk memastikan jalan yang tepat.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Bottom Sheet -->
+    <div id="bottom-sheet">
+        <!-- Handle Area -->
+        <div class="sheet-header cursor-grab active:cursor-grabbing pb-2 px-6" id="sheet-header">
+            <div class="sheet-handle"></div>
+            <div class="flex items-center justify-between mt-2">
+                <h2 class="font-bold text-gray-800">Daftar Kunjungan</h2>
+                <span class="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-500" id="total-count">0 Lokasi</span>
+            </div>
+            <!-- Search Bar Visual -->
+            <div class="relative mt-3">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                <input type="text" id="search-input" placeholder="Cari nama atau desa..." 
+                       class="w-full bg-gray-50 border-none rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all">
+            </div>
+        </div>
+
+        <!-- Scrollable List Content -->
+        <div class="flex-1 overflow-y-auto custom-scroll px-6 pb-24" id="list-content">
+            <!-- Dynamic Groups will appear here -->
+        </div>
+
+        <!-- Fixed Sheet Footer -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 text-center">
+            <p class="text-[10px] text-gray-400">© 2026 TMC MTSN 3 TULUNGAGUNG</p>
+            <p class="text-[10px] font-bold text-emerald-600">Navigasi Hati, Eratkan Silaturahmi</p>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // --- DATASET ---
+        const dataset = [
+            { name: "Bu Ida Rochmawati", info: "Dekat Kantor Kecamatan", coords: [-8.121972, 112.080917], village: "REJOTANGAN", color: "#10b981", isApprox: false },
+            { name: "Pak Nur Rohmat", info: "Pundensari 📍", coords: [-8.1233193, 112.0750821], village: "REJOTANGAN", color: "#10b981", isApprox: true },
+            
+            { name: "Pak Mujib", info: "Darusalam 📍", coords: [-8.1289356, 112.0603745], village: "ARYOJEDING", color: "#3b82f6", isApprox: true },
+            { name: "Bu Thrisia", info: "Watu Gatho 📍", coords: [-8.1246732, 112.0518854], village: "ARYOJEDING", color: "#3b82f6", isApprox: true },
+            
+            { name: "Bu Siti Mahmudah", info: "Depan Halona/Mushola", coords: [-8.1270, 112.081306], village: "PAKISREJO", color: "#f59e0b", isApprox: false },
+            { name: "Pak Ipul", info: "Depan WPC Pakisrejo", coords: [-8.1283564, 112.0815814], village: "PAKISREJO", color: "#f59e0b", isApprox: false },
+            { name: "Bu Nurjayati", info: "Balaidesa Pakisrejo ke utara", coords: [-8.1272700, 112.0748943], village: "PAKISREJO", color: "#f59e0b", isApprox: false },
+            
+            { name: "Bu Suci", info: "Dekat Masjid Besar Nur Hasan", coords: [-8.126694, 112.071694], village: "TEGALREJO", color: "#ec4899", isApprox: false },
+            
+            { name: "Pak Lutfi", info: "Puskesmas 📍", coords: [-8.1314398, 112.0563660], village: "BANJAREJO", color: "#8b5cf6", isApprox: true },
+            
+            { name: "Pak Ahmad", info: "Tugu Pagar Nusa Soko, Rumah Oren", coords: [-8.141472, 112.026722], village: "KARANGSARI", color: "#ef4444", isApprox: false },
+            
+            { name: "Bu Nurhidayati", info: "Dekat MI Irsyadus Shibyan, Jalan Kecil", coords: [-8.1571957, 112.0518112], village: "SUKOREJO", color: "#06b6d4", isApprox: false },
+            
+            { name: "Bu Ribha", info: "Dusun Giring, BRI ke selatan", coords: [-8.138667, 112.036917], village: "TENGGUR", color: "#a855f7", isApprox: false },
+            
+            { name: "Pak Kalimi", info: "Dekat Balaidesa Buntaran 📍", coords: [-8.115667, 112.040528], village: "BUNTARAN", color: "#d946ef", isApprox: true },
+            { name: "Pak Ali", info: "Fotokopi Karunia 2, Kebonagung", coords: [-8.1156, 112.0425], village: "BUNTARAN", color: "#d946ef", isApprox: false },
+            { name: "Pak Ahsan", info: "Tempat Kelompok Tani", coords: [-8.120694, 112.037750], village: "BUNTARAN", color: "#d946ef", isApprox: false },
+            
+            { name: "Bu Siska", info: "Jatidowo", coords: [-8.1501396, 112.0489822], village: "JATIDOWO", color: "#6366f1", isApprox: false },
+            
+            // NGUNUT (No Markers)
+            { name: "Bu Kuningsih", info: "Gilang 📍", coords: null, village: "NGUNUT", color: "#f97316", isApprox: true },
+            { name: "Bu Yeni", info: "Wonokromo 📍", coords: null, village: "NGUNUT", color: "#f97316", isApprox: true },
+            { name: "Bu Mes", info: "Stasiun 📍", coords: null, village: "NGUNUT", color: "#f97316", isApprox: true },
+            { name: "Pak Mustofa", info: "Dekat Sarjana Ngunut 📍", coords: null, village: "NGUNUT", color: "#f97316", isApprox: true },
+        ];
+
+        // --- MAP INITIALIZATION ---
+        const map = L.map('map', { zoomControl: false }).setView([-8.125, 112.06], 14);
+
+        // Layers
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri'
+        }).addTo(map);
+
+        const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{y}/{x}{r}.png', {
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        const markerGroup = L.layerGroup().addTo(map);
+
+        // --- RENDER MARKERS ---
+        dataset.forEach(item => {
+            if (!item.coords) return;
+
+            const marker = L.circleMarker(item.coords, {
+                radius: 10,
+                fillColor: item.color,
+                color: '#fff',
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.9,
+                className: 'pulse-animation'
+            }).addTo(markerGroup);
+
+            const popupContent = `
+                <div class="text-gray-800 p-1">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">${item.village}</div>
+                    <div class="text-sm font-bold text-emerald-700 mt-1">Rumah ${item.name}</div>
+                    <div class="text-xs text-gray-600 mt-1 italic">${item.info}</div>
+                    ${item.isApprox ? `
+                        <div class="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200 text-[9px] text-amber-700 leading-tight">
+                            <b>Catatan:</b> Lokasi bersifat perkiraan. Silakan tanya warga atau hubungi ybs jika sudah di area.
+                        </div>
+                    ` : ''}
+                    <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${item.coords[0]},${item.coords[1]}')" 
+                            class="w-full mt-3 bg-emerald-600 text-white text-[10px] font-bold py-2 rounded-lg flex items-center justify-center gap-2">
+                        <i data-lucide="external-link" class="w-3 h-3"></i> BUKA DI GOOGLE MAPS
+                    </button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            item.markerInstance = marker;
+        });
+
+        // --- UI LOGIC ---
+        function dismissBanner() {
+            gsap.to("#banner-tips", { opacity: 0, height: 0, marginTop: 0, duration: 0.3, onComplete: () => document.getElementById('banner-tips').remove() });
+        }
+
+        const bottomSheet = document.getElementById('bottom-sheet');
+        const sheetHeader = document.getElementById('sheet-header');
+        const listContent = document.getElementById('list-content');
+        const searchInput = document.getElementById('search-input');
+        
+        let sheetState = 'collapsed'; // collapsed, half, expanded
+
+        // Snapping Points
+        const snapPositions = {
+            collapsed: window.innerHeight - 140,
+            half: window.innerHeight * 0.5,
+            expanded: 20
+        };
+
+        function setSheetState(state) {
+            sheetState = state;
+            gsap.to(bottomSheet, {
+                y: snapPositions[state],
+                duration: 0.5,
+                ease: "power3.out"
+            });
+        }
+
+        // Drag/Touch Interaction
+        let startY, startPos;
+        sheetHeader.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            startPos = gsap.getProperty(bottomSheet, "y");
+        });
+
+        sheetHeader.addEventListener('touchmove', (e) => {
+            const currentY = e.touches[0].clientY;
+            const deltaY = currentY - startY;
+            const newY = startPos + deltaY;
+            
+            if (newY > 20 && newY < window.innerHeight - 80) {
+                gsap.set(bottomSheet, { y: newY });
+            }
+        });
+
+        sheetHeader.addEventListener('touchend', (e) => {
+            const currentY = gsap.getProperty(bottomSheet, "y");
+            if (currentY < window.innerHeight * 0.3) setSheetState('expanded');
+            else if (currentY < window.innerHeight * 0.7) setSheetState('half');
+            else setSheetState('collapsed');
+        });
+
+        // Click on input triggers half/expanded
+        searchInput.addEventListener('focus', () => setSheetState('expanded'));
+
+        // Render List
+        function renderList(filter = '') {
+            const groups = {};
+            let count = 0;
+
+            const filteredData = dataset.filter(item => 
+                item.name.toLowerCase().includes(filter.toLowerCase()) || 
+                item.village.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            filteredData.forEach(item => {
+                if (!groups[item.village]) groups[item.village] = [];
+                groups[item.village].push(item);
+                count++;
+            });
+
+            document.getElementById('total-count').innerText = `${count} Lokasi`;
+
+            let html = '';
+            for (const village in groups) {
+                html += `
+                    <div class="mt-6 mb-2">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-2 h-2 rounded-full" style="background: ${groups[village][0].color}"></span>
+                            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">${village}</h3>
+                        </div>
+                        <div class="space-y-3">
+                            ${groups[village].map(person => `
+                                <div class="bg-gray-50 rounded-2xl p-4 flex items-center justify-between group transition-all hover:bg-emerald-50 border border-transparent hover:border-emerald-100">
+                                    <div class="flex-1">
+                                        <h4 class="font-bold text-gray-800 text-sm">Rumah ${person.name}</h4>
+                                        <p class="text-[11px] text-gray-500 line-clamp-1">${person.info}</p>
+                                    </div>
+                                    ${person.coords ? `
+                                        <button onclick="flyToLocation(${person.coords[0]}, ${person.coords[1]}, '${person.name}')" 
+                                                class="ml-4 flex items-center gap-1 bg-white border border-gray-200 px-3 py-1.5 rounded-xl text-[10px] font-bold text-emerald-600 shadow-sm hover:shadow-md transition-all active:scale-95">
+                                            <i data-lucide="navigation" class="w-3 h-3"></i> NAVIGASI
+                                        </button>
+                                    ` : `
+                                        <span class="text-[9px] font-bold text-gray-300 italic px-2">Kontak Ybs</span>
+                                    `}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            listContent.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function flyToLocation(lat, lng, name) {
+            setSheetState('collapsed');
+            map.flyTo([lat, lng], 18, { duration: 1.5 });
+            
+            // Find marker to open popup
+            const item = dataset.find(i => i.name === name);
+            if (item && item.markerInstance) {
+                setTimeout(() => item.markerInstance.openPopup(), 1600);
+            }
+        }
+
+        searchInput.addEventListener('input', (e) => renderList(e.target.value));
+
+        window.onload = () => {
+            renderList();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
+
